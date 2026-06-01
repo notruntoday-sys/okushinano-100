@@ -1,0 +1,1588 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>奥信濃100 ペース計算ツール</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --aid-col: 190px;
+        --dist-col: 140px;
+        --ink: #17201b;
+        --muted: #627066;
+        --line: #d9e1d9;
+        --bg: #f7f7f2;
+        --panel: #ffffff;
+        --accent: #23533d;
+        --accent-2: #527a45;
+        --warn: #ffe08a;
+        --danger: #c93434;
+        --shadow: 0 10px 28px rgba(26, 54, 40, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        position: relative;
+        margin: 0;
+        background:
+          linear-gradient(180deg, rgba(82, 122, 69, 0.13), rgba(247, 247, 242, 0) 280px),
+          var(--bg);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic", sans-serif;
+        line-height: 1.55;
+      }
+
+      body::before {
+        position: fixed;
+        inset: 0;
+        z-index: -2;
+        background:
+          linear-gradient(180deg, rgba(247, 247, 242, 0.84), rgba(247, 247, 242, 0.92)),
+          url("assets/sawa-background.jpg") center / cover no-repeat;
+        content: "";
+      }
+
+      body::after {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        background: rgba(247, 247, 242, 0.58);
+        content: "";
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      .app {
+        position: relative;
+        width: min(1480px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 22px 0 36px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.45rem, 2.5vw, 2.35rem);
+        line-height: 1.15;
+        letter-spacing: 0;
+      }
+
+      .version {
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 0.94rem;
+      }
+
+      .summary {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .chip {
+        min-height: 34px;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.78);
+        padding: 6px 10px;
+        border-radius: 8px;
+        color: var(--muted);
+        font-size: 0.9rem;
+        white-space: nowrap;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(116px, 1fr)) auto auto;
+        gap: 12px;
+        align-items: end;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+        box-shadow: var(--shadow);
+      }
+
+      label {
+        display: grid;
+        gap: 5px;
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+
+      input,
+      select {
+        width: 100%;
+        min-height: 40px;
+        border: 1px solid #c6d0c7;
+        border-radius: 7px;
+        background: #fff;
+        color: var(--ink);
+        padding: 7px 9px;
+      }
+
+      input:focus,
+      select:focus,
+      button:focus-visible {
+        outline: 3px solid rgba(82, 122, 69, 0.22);
+        outline-offset: 2px;
+      }
+
+      button {
+        min-height: 40px;
+        border: 0;
+        border-radius: 7px;
+        background: var(--accent);
+        color: #fff;
+        padding: 8px 14px;
+        font-weight: 800;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      button:hover {
+        filter: brightness(0.95);
+      }
+
+      .secondary-button {
+        background: #23313f;
+      }
+
+      .notice {
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .table-shell {
+        margin-top: 18px;
+        overflow-x: auto;
+        overflow-y: visible;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      table {
+        width: 100%;
+        min-width: 980px;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 0.9rem;
+      }
+
+      th,
+      td {
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        padding: 8px 9px;
+        vertical-align: middle;
+        text-align: center;
+        background: #fff;
+      }
+
+      th {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        background: #23313f;
+        color: #fff;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      th:first-child,
+      td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 3;
+        text-align: left;
+        width: var(--aid-col);
+        min-width: var(--aid-col);
+        max-width: var(--aid-col);
+        font-weight: 800;
+      }
+
+      th:first-child {
+        z-index: 5;
+      }
+
+      td:first-child {
+        background: #fafbf8;
+      }
+
+      td:nth-child(2),
+      th:nth-child(2) {
+        position: sticky;
+        left: var(--aid-col);
+        z-index: 3;
+        width: var(--dist-col);
+        min-width: var(--dist-col);
+        max-width: var(--dist-col);
+      }
+
+      th:nth-child(2) {
+        z-index: 5;
+      }
+
+      td:nth-child(2) {
+        background: #fff;
+      }
+
+      td:nth-child(3),
+      th:nth-child(3) {
+        min-width: 72px;
+      }
+
+      .aid-row td {
+        font-weight: 650;
+      }
+
+      .pace-row td {
+        background: #f1f4f1;
+        color: #43505c;
+        font-size: 0.84rem;
+      }
+
+      .pace-row td:first-child {
+        color: var(--accent);
+        font-weight: 900;
+      }
+
+      .cutoff-tag {
+        display: inline-flex;
+        margin-top: 3px;
+        color: #b15c25;
+        font-size: 0.76rem;
+        font-weight: 800;
+      }
+
+      .info-tag {
+        display: inline-flex;
+        margin-top: 3px;
+        margin-right: 4px;
+        border: 1px solid #c6d0c7;
+        border-radius: 999px;
+        padding: 1px 6px;
+        color: #405247;
+        font-size: 0.68rem;
+        font-weight: 900;
+      }
+
+      .hatched-yellow {
+        display: inline-block;
+        padding: 1px 4px;
+        border-radius: 5px;
+        color: #3b2a00;
+        background:
+          repeating-linear-gradient(
+            -45deg,
+            var(--warn),
+            var(--warn) 5px,
+            #ffd15d 5px,
+            #ffd15d 10px
+          );
+      }
+
+      .split-times {
+        display: inline-grid;
+        gap: 2px;
+        justify-items: center;
+        white-space: nowrap;
+      }
+
+      .split-time-line {
+        white-space: nowrap;
+      }
+
+      .arrival-capped {
+        color: var(--danger);
+        font-weight: 900;
+      }
+
+      .headlight-cell {
+        background:
+          repeating-linear-gradient(
+            -45deg,
+            rgba(35, 49, 63, 0.1),
+            rgba(35, 49, 63, 0.1) 6px,
+            rgba(35, 49, 63, 0.18) 6px,
+            rgba(35, 49, 63, 0.18) 12px
+          ),
+          #f7f9fb;
+      }
+
+      .legend {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .aid-info {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .aid-info summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 46px;
+        padding: 12px 14px;
+        color: var(--ink);
+        cursor: pointer;
+        font-weight: 900;
+        list-style: none;
+      }
+
+      .aid-info summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .aid-info summary::after {
+        color: var(--muted);
+        content: "開く";
+        font-size: 0.78rem;
+      }
+
+      .aid-info[open] summary::after {
+        content: "閉じる";
+      }
+
+      .aid-source {
+        margin: -4px 14px 12px;
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .aid-source a {
+        color: var(--accent);
+        font-weight: 800;
+        text-underline-offset: 3px;
+      }
+
+      .aid-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        padding: 0 14px 14px;
+      }
+
+      .aid-card {
+        display: grid;
+        gap: 8px;
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px;
+      }
+
+      .aid-card h3 {
+        margin: 0;
+        color: var(--accent);
+        font-size: 0.96rem;
+        line-height: 1.25;
+      }
+
+      .aid-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.76rem;
+        font-weight: 800;
+      }
+
+      .aid-card ul {
+        display: grid;
+        gap: 3px;
+        margin: 0;
+        padding-left: 1.15rem;
+        color: #405247;
+        font-size: 0.78rem;
+        line-height: 1.45;
+      }
+
+      .aid-card .drink-list {
+        color: #49656f;
+      }
+
+      .mark {
+        width: 18px;
+        height: 12px;
+        border-radius: 4px;
+        display: inline-block;
+      }
+
+      .mark.warn {
+        background:
+          repeating-linear-gradient(
+            -45deg,
+            var(--warn),
+            var(--warn) 5px,
+            #ffd15d 5px,
+            #ffd15d 10px
+          );
+      }
+
+      .mark.danger {
+        background: var(--danger);
+      }
+
+      .mark.headlight {
+        background:
+          repeating-linear-gradient(
+            -45deg,
+            rgba(35, 49, 63, 0.18),
+            rgba(35, 49, 63, 0.18) 6px,
+            rgba(35, 49, 63, 0.34) 6px,
+            rgba(35, 49, 63, 0.34) 12px
+          ),
+          #f7f9fb;
+      }
+
+      .wallpaper-panel {
+        margin-top: 18px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        padding: 14px;
+      }
+
+      .wallpaper-panel[hidden] {
+        display: none;
+      }
+
+      .wallpaper-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+
+      .wallpaper-title {
+        font-weight: 900;
+      }
+
+      .download-button,
+      .close-button {
+        display: inline-flex;
+        align-items: center;
+        min-height: 36px;
+        border: 0;
+        border-radius: 7px;
+        background: var(--accent-2);
+        color: #fff;
+        text-decoration: none;
+        padding: 7px 12px;
+        font-weight: 800;
+      }
+
+      .wallpaper-frame {
+        display: grid;
+        place-items: center;
+        background: #e8ece7;
+        border-radius: 8px;
+        padding: 12px;
+        overflow: auto;
+      }
+
+      .wallpaper-frame img {
+        width: min(100%, 390px);
+        height: auto;
+        border-radius: 22px;
+        box-shadow: 0 18px 40px rgba(23, 32, 42, 0.22);
+      }
+
+      .wallpaper-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .close-button {
+        background: #66717e;
+      }
+
+      .site-footer {
+        margin-top: 18px;
+        padding: 14px 0 4px;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .podcast-note {
+        display: grid;
+        gap: 6px;
+        max-width: 760px;
+      }
+
+      .podcast-line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        font-weight: 700;
+      }
+
+      .podcast-name {
+        color: #2563eb;
+        font-weight: 900;
+      }
+
+      .podcast-links {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.78rem;
+      }
+
+      .podcast-links a {
+        font-weight: 900;
+        text-underline-offset: 3px;
+      }
+
+      .spotify-link {
+        color: #16a34a;
+      }
+
+      .apple-link {
+        color: #2563eb;
+      }
+
+      .ofuse-area {
+        display: flex;
+        justify-content: center;
+        margin: 22px 0 0;
+      }
+
+      .ofuse-widget-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        border-radius: 999px;
+        background: #2563eb;
+        color: #fff;
+        padding: 7px 14px;
+        text-decoration: none;
+        font-size: 0.82rem;
+        font-weight: 900;
+      }
+
+      @media (max-width: 980px) {
+        .app {
+          width: min(100% - 12px, 1480px);
+          padding-top: 10px;
+        }
+
+        .topbar {
+          display: block;
+          margin-bottom: 10px;
+        }
+
+        .summary {
+          justify-content: flex-start;
+          margin-top: 8px;
+          gap: 6px;
+        }
+
+        .controls {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+          padding: 10px;
+        }
+
+        .table-shell {
+          margin-top: 10px;
+        }
+      }
+
+      @media (max-width: 560px) {
+        :root {
+          --aid-col: 98px;
+          --dist-col: 78px;
+        }
+
+        body {
+          line-height: 1.35;
+        }
+
+        h1 {
+          font-size: 1.18rem;
+        }
+
+        .version {
+          margin-top: 2px;
+          font-size: 0.76rem;
+        }
+
+        .summary {
+          display: none;
+        }
+
+        .controls {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          border-radius: 7px;
+          gap: 6px;
+          padding: 7px;
+        }
+
+        .controls button {
+          min-height: 34px;
+          padding: 5px 8px;
+          font-size: 0.82rem;
+        }
+
+        label {
+          gap: 2px;
+          font-size: 0.7rem;
+        }
+
+        input,
+        select {
+          min-height: 34px;
+          padding: 4px 7px;
+          border-radius: 6px;
+          font-size: 0.84rem;
+        }
+
+        .notice {
+          margin-top: 6px;
+          font-size: 0.72rem;
+        }
+
+        .legend {
+          margin-top: 6px;
+          gap: 5px;
+          font-size: 0.68rem;
+        }
+
+        .mark {
+          width: 14px;
+          height: 9px;
+        }
+
+        table {
+          min-width: 690px;
+          font-size: 0.64rem;
+        }
+
+        th,
+        td {
+          padding: 4px 3px;
+        }
+
+        th:first-child,
+        td:first-child {
+          min-width: var(--aid-col);
+          max-width: var(--aid-col);
+        }
+
+        td:nth-child(2),
+        th:nth-child(2) {
+          min-width: var(--dist-col);
+          max-width: var(--dist-col);
+          white-space: normal;
+        }
+
+        td:nth-child(3),
+        th:nth-child(3) {
+          min-width: 30px;
+          max-width: 34px;
+          padding-left: 3px;
+          padding-right: 3px;
+        }
+
+        th:nth-child(n+4),
+        td:nth-child(n+4) {
+          min-width: 74px;
+          max-width: 74px;
+          padding-left: 2px;
+          padding-right: 2px;
+          font-size: 0.5rem;
+          line-height: 1.18;
+          white-space: nowrap;
+        }
+
+        .split-times {
+          gap: 1px;
+        }
+
+        .cutoff-tag,
+        .info-tag {
+          font-size: 0.56rem;
+        }
+
+        .pace-row td {
+          font-size: 0.52rem;
+        }
+
+        .wallpaper-panel {
+          margin-top: 10px;
+          padding: 8px;
+        }
+
+        .aid-info {
+          margin-top: 12px;
+          border-radius: 7px;
+        }
+
+        .aid-info summary {
+          min-height: 40px;
+          padding: 9px 10px;
+          font-size: 0.86rem;
+        }
+
+        .aid-source {
+          margin: -2px 10px 10px;
+          font-size: 0.68rem;
+        }
+
+        .aid-grid {
+          grid-template-columns: 1fr;
+          gap: 7px;
+          padding: 0 10px 10px;
+        }
+
+        .aid-card {
+          gap: 6px;
+          padding: 8px;
+        }
+
+        .aid-card h3 {
+          font-size: 0.84rem;
+        }
+
+        .aid-card p,
+        .aid-card ul {
+          font-size: 0.68rem;
+        }
+
+        .wallpaper-frame {
+          padding: 8px;
+        }
+
+        .site-footer {
+          margin-top: 12px;
+          padding-top: 10px;
+          font-size: 0.68rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="topbar" aria-labelledby="title">
+        <div>
+          <h1 id="title">奥信濃100 ペース計算ツール</h1>
+          <div class="version">Okushinano 100 pace planner / 2026 course</div>
+        </div>
+        <div class="summary" aria-label="コース概要">
+          <span class="chip">距離 100.0 km</span>
+          <span class="chip">累積 +4,800 m</span>
+          <span class="chip">5:00 スタート固定</span>
+          <span class="chip">制限 21時間</span>
+        </div>
+      </section>
+
+      <form class="controls" id="pace-form">
+        <label>
+          休憩パターン
+          <select id="rest-pattern">
+            <option>短め</option>
+            <option selected>標準</option>
+            <option>長め</option>
+          </select>
+        </label>
+        <label>
+          ペース戦略
+          <select id="strategy">
+            <option selected>イーブン</option>
+            <option>後半10%落ち</option>
+            <option>後半20%落ち</option>
+            <option>後半30%落ち</option>
+            <option>後半40%落ち</option>
+            <option>後半50%落ち</option>
+          </select>
+        </label>
+        <label>
+          最短時間
+          <select id="min-hour"></select>
+        </label>
+        <label>
+          最長時間
+          <select id="max-hour"></select>
+        </label>
+        <button type="submit">再計算</button>
+        <button class="secondary-button" id="wallpaper-button" type="button">待ち受け表示</button>
+      </form>
+
+      <p class="notice" id="notice"></p>
+
+      <section class="wallpaper-panel" id="wallpaper-panel" hidden>
+        <div class="wallpaper-head">
+          <div class="wallpaper-title" id="wallpaper-title">待ち受け画像</div>
+          <div class="wallpaper-actions">
+            <button class="download-button" id="wallpaper-png" type="button">PNG保存</button>
+            <button class="close-button" id="wallpaper-close" type="button">閉じる</button>
+          </div>
+        </div>
+        <div class="wallpaper-frame">
+          <img id="wallpaper-image" alt="奥信濃100 ペース待ち受け画像">
+        </div>
+      </section>
+
+      <section class="table-shell" aria-live="polite">
+        <table id="pace-table"></table>
+      </section>
+
+      <div class="legend">
+        <span><i class="mark warn"></i>OUT関門1分前に出発するよう補正</span>
+        <span><i class="mark danger"></i>IN/フィニッシュ関門5分前に到着するよう補正</span>
+        <span><i class="mark headlight"></i>ヘッドライト推奨時間帯 19:02-04:28</span>
+      </div>
+
+      <details class="aid-info">
+        <summary>2026 エイド提供情報</summary>
+        <p class="aid-source">
+          公式資料:
+          <a href="https://okushinano100.com/news/2026aid20260531.pdf" target="_blank" rel="noopener noreferrer">2026各エイドでの提供物一覧</a>
+          / マイ箸・マイコップ持参
+        </p>
+        <div class="aid-grid">
+          <article class="aid-card">
+            <h3>A1 どんぐり公園</h3>
+            <p>食べ物</p>
+            <ul>
+              <li>まんじゅう</li>
+              <li>ミックス柏餅</li>
+              <li>塩熱サプリ</li>
+              <li>バナナ / 羊羹 / チップスター</li>
+            </ul>
+            <p>ドリンク</p>
+            <ul class="drink-list">
+              <li>水 / 麦茶 / コーラ</li>
+              <li>オレンジジュース / ミルクティー</li>
+              <li>クエン酸ドリンク</li>
+            </ul>
+          </article>
+
+          <article class="aid-card">
+            <h3>A2 会場</h3>
+            <p>食べ物</p>
+            <ul>
+              <li>まんじゅう / りんごジャムビスケット</li>
+              <li>イナゴ / きゅうり</li>
+              <li>塩熱サプリ / 塩レモンこんにゃくゼリー</li>
+              <li>バナナ / 羊羹 / チップスター / いなり寿司</li>
+            </ul>
+            <p>ドリンク</p>
+            <ul class="drink-list">
+              <li>水 / 麦茶 / コーラ</li>
+              <li>オレンジジュース / ミルクティー / クエン酸ドリンク</li>
+            </ul>
+          </article>
+
+          <article class="aid-card">
+            <h3>A3 カヤの平WA</h3>
+            <p>提供物</p>
+            <ul>
+              <li>塩熱サプリ</li>
+              <li>水</li>
+            </ul>
+          </article>
+
+          <article class="aid-card">
+            <h3>A4 カヤの平</h3>
+            <p>食べ物</p>
+            <ul>
+              <li>まんじゅう / ミックス柏餅</li>
+              <li>塩熱サプリ / 塩レモンこんにゃくゼリー</li>
+              <li>バナナ / 羊羹 / チップスター</li>
+              <li>イナゴ / 野沢菜漬け / いなり寿司</li>
+            </ul>
+            <p>ドリンク</p>
+            <ul class="drink-list">
+              <li>水 / 麦茶 / コーラ</li>
+              <li>オレンジジュース / ミルクティー / クエン酸ドリンク</li>
+            </ul>
+          </article>
+
+          <article class="aid-card">
+            <h3>A5 カヤの平</h3>
+            <p>食べ物</p>
+            <ul>
+              <li>ミックス柏餅</li>
+              <li>塩熱サプリ</li>
+              <li>バナナ / 羊羹 / チップスター</li>
+              <li>しば漬け / いなり寿司</li>
+            </ul>
+            <p>ドリンク</p>
+            <ul class="drink-list">
+              <li>水 / 麦茶 / コーラ</li>
+              <li>オレンジジュース / ミルクティー / クエン酸ドリンク</li>
+            </ul>
+          </article>
+
+          <article class="aid-card">
+            <h3>A6 糠千</h3>
+            <p>食べ物</p>
+            <ul>
+              <li>まんじゅう / りんごジャムビスケット</li>
+              <li>おやき / ミックス柏餅 / 豚汁</li>
+              <li>きゅうり / 塩熱サプリ / こんにゃくゼリー</li>
+              <li>バナナ / チップスター / シャリ玉</li>
+            </ul>
+            <p>ドリンク</p>
+            <ul class="drink-list">
+              <li>水 / お湯 / 麦茶 / コーラ</li>
+              <li>オレンジジュース / ミルクティー / クエン酸ドリンク</li>
+            </ul>
+          </article>
+
+          <article class="aid-card">
+            <h3>A7 ケヤキの森公園</h3>
+            <p>食べ物</p>
+            <ul>
+              <li>まんじゅう / ブタメン</li>
+              <li>きゅうり / 塩熱サプリ</li>
+              <li>バナナ / 羊羹 / チップスター / シャリ玉</li>
+            </ul>
+            <p>ドリンク</p>
+            <ul class="drink-list">
+              <li>水 / お湯 / 麦茶 / コーラ</li>
+              <li>オレンジジュース / ミルクティー / クエン酸ドリンク</li>
+            </ul>
+          </article>
+
+          <article class="aid-card">
+            <h3>A8 糠千</h3>
+            <p>食べ物</p>
+            <ul>
+              <li>まんじゅう / 豚汁</li>
+              <li>塩熱サプリ</li>
+              <li>バナナ / チップスター / シャリ玉</li>
+            </ul>
+            <p>ドリンク</p>
+            <ul class="drink-list">
+              <li>水 / お湯 / 麦茶 / コーラ</li>
+              <li>オレンジジュース / ミルクティー / クエン酸ドリンク</li>
+            </ul>
+          </article>
+        </div>
+      </details>
+
+      <footer class="site-footer">
+        <div class="podcast-note">
+          <div class="podcast-line">
+            <span>Produced by <span class="podcast-name">今日は走らないでビール</span></span>
+            <span class="podcast-links" aria-label="Podcast links">
+              <a class="spotify-link" href="https://open.spotify.com/show/0j1TXvIRRcwkbfsRHjM5qT" target="_blank" rel="noopener noreferrer">Spotify</a>
+              <span>/</span>
+              <a class="apple-link" href="https://podcasts.apple.com/jp/podcast/今日は走らないでビール/id1655012487" target="_blank" rel="noopener noreferrer">Apple Podcasts</a>
+            </span>
+          </div>
+          <p>奥信濃100の関門表を、2025年男子完走者の実績比率をもとに作るペース計算ツールです。新設のA3は、A2-A4間の実績比率を地形負荷で分割して補完しています。</p>
+        </div>
+
+        <div class="ofuse-area">
+          <a
+            class="ofuse-widget-button"
+            href="https://ofuse.me/o?uid=163955"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-ofuse-widget-button
+            data-ofuse-id="163955"
+            data-ofuse-size="small"
+            data-ofuse-color="blue"
+          >OFUSEで応援を送る</a>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      const COURSE_TOTALS = {
+        dist: 100.0,
+        gain: 4800,
+        loss: 4800
+      };
+      const SUNRISE_MINUTES = (4 * 60) + 28;
+      const SUNSET_MINUTES = (19 * 60) + 2;
+      const SUNRISE_LABEL = "04:28";
+      const SUNSET_LABEL = "19:02";
+      const HEADLIGHT_CELL_MARKER = "__HEADLIGHT_CELL__";
+      const STORAGE_KEY = "okushinano-100-pace-settings-v2";
+      const RESULT_BASED_CUMULATIVE = [
+        0.101938974,
+        0.244036701,
+        0.409070845,
+        0.494633233,
+        0.615168563,
+        0.715068158,
+        0.817982181,
+        0.946659996,
+        1.0
+      ];
+      const RESULT_BASED_SEGMENTS = RESULT_BASED_CUMULATIVE.map((value, index, array) => {
+        return index === 0 ? value : value - array[index - 1];
+      });
+
+      function calculatePaceData(restPattern, strategy, minH, maxH) {
+        const startMinutesAbsolute = 5 * 60;
+
+        let minHour = parseInt(minH, 10) || 15;
+        let maxHour = parseInt(maxH, 10) || 21;
+        minHour = clamp(minHour, 1, 60);
+        maxHour = clamp(maxHour, 1, 60);
+        if (minHour > maxHour) {
+          const temp = minHour;
+          minHour = maxHour;
+          maxHour = temp;
+        }
+
+        let stayTimes = [];
+        if (restPattern === "短め") {
+          stayTimes = [0, 4, 6, 3, 6, 6, 4, 4, 2, 0];
+        } else if (restPattern === "長め") {
+          stayTimes = [0, 8, 15, 5, 15, 15, 10, 10, 5, 0];
+        } else {
+          stayTimes = [0, 5, 10, 4, 10, 10, 6, 6, 3, 0];
+        }
+
+        const sections = [
+          { name: "Start:ロマンスの神様", dist: 0, gain: 0, loss: 0, stayTime: stayTimes[0], coef: 1.0, cutoff: null, cutoffStr: "", cutoffType: "", tags: [] },
+          { name: "A1:どんぐりの森", dist: 13.0, gain: 609, loss: 467, stayTime: stayTimes[1], coef: 1.0, cutoff: null, cutoffStr: "", cutoffType: "", tags: ["TOILET"] },
+          { name: "A2:会場エイド", dist: 14.0, gain: 1261, loss: 1544, stayTime: stayTimes[2], coef: 1.0, cutoff: startMinutesAbsolute + (6 * 60), cutoffStr: "11:00 OUT", cutoffType: "OUT", tags: ["DROP", "PACER"] },
+          { name: "A3:カヤの平WA", dist: 11.0, gain: 1149, loss: 486, stayTime: stayTimes[3], coef: 1.0, cutoff: startMinutesAbsolute + (10.5 * 60), cutoffStr: "15:30 OUT", cutoffType: "OUT", tags: [] },
+          { name: "A4:カヤの平1", dist: 10.0, gain: 166, loss: 52, stayTime: stayTimes[4], coef: 1.0, cutoff: startMinutesAbsolute + (11.5 * 60), cutoffStr: "16:30 IN", cutoffType: "IN", tags: ["PACER", "NO POLE"] },
+          { name: "A5:カヤの平2", dist: 10.0, gain: 56, loss: 83, stayTime: stayTimes[5], coef: 1.0, cutoff: startMinutesAbsolute + (13.5 * 60), cutoffStr: "18:30 OUT", cutoffType: "OUT", tags: ["PACER"] },
+          { name: "A6:糠千1", dist: 14.0, gain: 628, loss: 1232, stayTime: stayTimes[6], coef: 1.0, cutoff: startMinutesAbsolute + (15.5 * 60), cutoffStr: "20:30 OUT", cutoffType: "OUT", tags: ["PACER"] },
+          { name: "A7:ケヤキの森", dist: 12.0, gain: 337, loss: 610, stayTime: stayTimes[7], coef: 1.0, cutoff: startMinutesAbsolute + (17.5 * 60), cutoffStr: "22:30 OUT", cutoffType: "OUT", tags: [] },
+          { name: "A8:糠千2", dist: 11.0, gain: 594, loss: 326, stayTime: stayTimes[8], coef: 1.0, cutoff: startMinutesAbsolute + (19.5 * 60), cutoffStr: "翌00:30 OUT", cutoffType: "OUT", tags: [] },
+          { name: "Goal:ロマンスの神様", dist: 5.0, gain: 0, loss: 0, stayTime: stayTimes[9], coef: 1.0, cutoff: startMinutesAbsolute + (21 * 60), cutoffStr: "翌02:00", cutoffType: "IN", tags: [] }
+        ];
+
+        const baseEedArray = RESULT_BASED_SEGMENTS.slice();
+        const totalEED = baseEedArray.reduce((sum, value) => sum + value, 0);
+
+        const initialWeights = [];
+        let tempCumEED = 0;
+        for (let i = 0; i < baseEedArray.length; i++) {
+          const midEED = tempCumEED + (baseEedArray[i] / 2);
+          let multiplier = 1.0;
+          if (midEED > (totalEED / 2)) {
+            if (strategy === "後半10%落ち") multiplier = 1.1;
+            else if (strategy === "後半20%落ち") multiplier = 1.2;
+            else if (strategy === "後半30%落ち") multiplier = 1.3;
+            else if (strategy === "後半40%落ち") multiplier = 1.4;
+            else if (strategy === "後半50%落ち") multiplier = 1.5;
+          }
+          initialWeights.push(baseEedArray[i] * multiplier);
+          tempCumEED += baseEedArray[i];
+        }
+
+        const totalWeight = initialWeights.reduce((a, b) => a + b, 0);
+        const totalStayTime = sections.reduce((sum, section) => sum + section.stayTime, 0);
+        const schedules = {};
+
+        for (let h = minHour; h <= maxHour; h++) {
+          const arrAbs = new Array(sections.length);
+          const depAbs = new Array(sections.length);
+          const intervalArr = new Array(sections.length).fill(0);
+          const isArrivalCapped = new Array(sections.length).fill(false);
+          const isDepartureCapped = new Array(sections.length).fill(false);
+
+          const totalPlannedRunMins = (h * 60) - totalStayTime;
+          let currentPaceUnit = totalPlannedRunMins / totalWeight;
+          let prevDepAbs = startMinutesAbsolute;
+          let weightsFinished = 0;
+          let staysFinished = 0;
+
+          arrAbs[0] = startMinutesAbsolute;
+          depAbs[0] = startMinutesAbsolute;
+
+          for (let i = 1; i < sections.length; i++) {
+            const weight = initialWeights[i - 1];
+            let runTime = weight * currentPaceUnit;
+            let arrival = prevDepAbs + runTime;
+            let departure = arrival + sections[i].stayTime;
+
+            staysFinished += sections[i].stayTime;
+            weightsFinished += weight;
+
+            if (sections[i].cutoff !== null) {
+              const cutoffTarget = sections[i].cutoffType === "OUT" ? departure : arrival;
+              if (cutoffTarget > sections[i].cutoff) {
+                isArrivalCapped[i] = true;
+                arrival = sections[i].cutoff - 5;
+                if (sections[i].cutoffType === "OUT") {
+                  isDepartureCapped[i] = true;
+                  departure = sections[i].cutoff - 1;
+                } else {
+                  departure = arrival + sections[i].stayTime;
+                }
+                runTime = arrival - prevDepAbs;
+
+                const remainingWeight = totalWeight - weightsFinished;
+                if (remainingWeight > 0) {
+                  const timeUsedForRunSoFar = (departure - startMinutesAbsolute) - staysFinished;
+                  const remainingRunTime = totalPlannedRunMins - timeUsedForRunSoFar;
+                  currentPaceUnit = remainingRunTime / remainingWeight;
+                }
+              }
+            }
+
+            arrAbs[i] = arrival;
+            depAbs[i] = departure;
+            intervalArr[i] = runTime;
+            prevDepAbs = departure;
+          }
+          schedules[h] = { arrAbs, depAbs, intervalArr, isArrivalCapped, isDepartureCapped };
+        }
+
+        const headers = ["エイド", "距離 / D+ / D-", "滞在"];
+        for (let h = minHour; h <= maxHour; h++) headers.push(h + "h ペース");
+
+        const rows = [];
+        let cumDist = 0;
+        let cumGain = 0;
+        let cumLoss = 0;
+        for (let i = 0; i < sections.length; i++) {
+          cumDist += sections[i].dist;
+          cumGain += sections[i].gain;
+          cumLoss += sections[i].loss;
+          const tagHtml = sections[i].tags.map((tag) => `<span class="info-tag">${tag}</span>`).join("");
+          const cutoffHtml = sections[i].cutoffStr ? `<br><span class="cutoff-tag">関門 ${sections[i].cutoffStr}</span>` : "";
+          const nameHtml = sections[i].name + cutoffHtml + (tagHtml ? `<br>${tagHtml}` : "");
+          const aidRow = [
+            nameHtml,
+            i === 0 ? "-" : `${cumDist.toFixed(1)}k / +${cumGain} / -${cumLoss}`,
+            sections[i].stayTime === 0 ? "-" : sections[i].stayTime
+          ];
+
+          for (let h = minHour; h <= maxHour; h++) {
+            const schedule = schedules[h];
+            if (i === 0) {
+              aidRow.push("00:00 (" + formatTimeOnly(startMinutesAbsolute) + ")");
+            } else {
+              const needsHeadlight = i === sections.length - 1
+                ? isHeadlightTime(schedule.arrAbs[i])
+                : isHeadlightTime(schedule.arrAbs[i]) || isHeadlightTime(schedule.depAbs[i]);
+              let arrStr = formatTimeCombined(schedule.arrAbs[i] - startMinutesAbsolute, startMinutesAbsolute);
+              if (schedule.isArrivalCapped[i]) arrStr = `<span class="arrival-capped">${arrStr}</span>`;
+              if (i === sections.length - 1) {
+                aidRow.push(markHeadlightCell(arrStr, needsHeadlight));
+              } else {
+                let depStr = formatTimeCombined(schedule.depAbs[i] - startMinutesAbsolute, startMinutesAbsolute);
+                if (schedule.isDepartureCapped[i]) depStr = `<span class="hatched-yellow">${depStr}</span>`;
+                aidRow.push(markHeadlightCell(`<span class="split-times"><span class="split-time-line">${arrStr}着</span><span class="split-time-line">${depStr}発</span></span>`, needsHeadlight));
+              }
+            }
+          }
+          rows.push({ type: "aid", data: aidRow });
+
+          if (i < sections.length - 1) {
+            const next = sections[i + 1];
+            const paceRow = ["区間", `${next.dist.toFixed(1)}k / +${next.gain} / -${next.loss}`, ""];
+            for (let h = minHour; h <= maxHour; h++) {
+              const interval = schedules[h].intervalArr[i + 1];
+              const paceMinKm = interval / next.dist;
+              const needsHeadlight = doesIntervalNeedHeadlight(schedules[h].depAbs[i], schedules[h].arrAbs[i + 1]);
+              paceRow.push(markHeadlightCell(`${Math.floor(interval / 60)}:${Math.round(interval % 60).toString().padStart(2, "0")} (${formatPace(paceMinKm)})`, needsHeadlight));
+            }
+            rows.push({ type: "pace", data: paceRow });
+          }
+        }
+
+        return { headers, rows, meta: { minHour, maxHour, totalStayTime, startMinutesAbsolute } };
+      }
+
+      function formatPace(minKm) {
+        if (!minKm || isNaN(minKm)) return "-";
+        const totalSeconds = Math.round(minKm * 60);
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        return mins + ":" + secs.toString().padStart(2, "0") + "/km";
+      }
+
+      function formatTimeCombined(minutes, startMinsAbs) {
+        const totalMins = Math.round(minutes);
+        const actualTotalMins = startMinsAbs + totalMins;
+        const actualH = Math.floor(actualTotalMins / 60) % 24;
+        const actualM = positiveModulo(actualTotalMins, 60);
+        const pad = (n) => n.toString().padStart(2, "0");
+        return `${pad(Math.floor(totalMins / 60))}:${pad(positiveModulo(totalMins, 60))} (${pad(actualH)}:${pad(actualM)})`;
+      }
+
+      function formatTimeOnly(totalMinsAbsolute) {
+        const h = Math.floor(totalMinsAbsolute / 60) % 24;
+        const m = positiveModulo(totalMinsAbsolute, 60);
+        return h.toString().padStart(2, "0") + ":" + m.toString().padStart(2, "0");
+      }
+
+      function positiveModulo(value, divisor) {
+        return ((Math.round(value) % divisor) + divisor) % divisor;
+      }
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function markHeadlightCell(value, needsHeadlight) {
+        return needsHeadlight ? HEADLIGHT_CELL_MARKER + value : value;
+      }
+
+      function isHeadlightTime(absMinutes) {
+        const dayMinute = positiveModulo(absMinutes, 24 * 60);
+        return dayMinute < SUNRISE_MINUTES || dayMinute >= SUNSET_MINUTES;
+      }
+
+      function doesIntervalNeedHeadlight(startAbs, endAbs) {
+        const start = Math.round(startAbs);
+        const end = Math.round(endAbs);
+        for (let minute = start; minute <= end; minute += 15) {
+          if (isHeadlightTime(minute)) return true;
+        }
+        return isHeadlightTime(end);
+      }
+
+      function renderTable(result) {
+        const table = document.querySelector("#pace-table");
+        table.textContent = "";
+
+        const thead = document.createElement("thead");
+        const headerRow = document.createElement("tr");
+        result.headers.forEach((header) => {
+          const th = document.createElement("th");
+          th.textContent = header;
+          headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        result.rows.forEach((row) => {
+          const tr = document.createElement("tr");
+          tr.className = row.type === "pace" ? "pace-row" : "aid-row";
+          row.data.forEach((cell) => {
+            const td = document.createElement("td");
+            const html = String(cell);
+            if (html.startsWith(HEADLIGHT_CELL_MARKER)) td.classList.add("headlight-cell");
+            td.innerHTML = html.replace(HEADLIGHT_CELL_MARKER, "");
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+      }
+
+      function update() {
+        const result = calculatePaceData(
+          document.querySelector("#rest-pattern").value,
+          document.querySelector("#strategy").value,
+          document.querySelector("#min-hour").value,
+          document.querySelector("#max-hour").value
+        );
+        renderTable(result);
+
+        const notice = document.querySelector("#notice");
+        notice.textContent = `表示範囲 ${result.meta.minHour}h-${result.meta.maxHour}h / 休憩合計 ${result.meta.totalStayTime}分 / スタート ${formatTimeOnly(result.meta.startMinutesAbsolute)} / 日の出 ${SUNRISE_LABEL} / 日の入 ${SUNSET_LABEL} / コース ${COURSE_TOTALS.dist.toFixed(1)}km +${COURSE_TOTALS.gain}m / 2025男子実績比率ベース`;
+        saveSettings();
+      }
+
+      function saveSettings() {
+        const settings = {
+          restPattern: document.querySelector("#rest-pattern").value,
+          strategy: document.querySelector("#strategy").value,
+          minHour: document.querySelector("#min-hour").value,
+          maxHour: document.querySelector("#max-hour").value
+        };
+
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+        } catch (error) {
+          console.warn("Unable to save settings", error);
+        }
+      }
+
+      function restoreSettings() {
+        let settings = null;
+        try {
+          settings = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+        } catch (error) {
+          console.warn("Unable to restore settings", error);
+        }
+
+        if (!settings || typeof settings !== "object") return;
+
+        setControlValue("#rest-pattern", settings.restPattern);
+        setControlValue("#strategy", settings.strategy);
+        setControlValue("#min-hour", settings.minHour);
+        setControlValue("#max-hour", settings.maxHour);
+      }
+
+      function setControlValue(selector, value) {
+        const control = document.querySelector(selector);
+        if (!control || value === undefined || value === null) return;
+        const stringValue = String(value);
+        if (control.tagName === "SELECT") {
+          const hasOption = Array.from(control.options).some((option) => option.value === stringValue);
+          if (!hasOption) return;
+        }
+        control.value = stringValue;
+      }
+
+      function populateHourSelects() {
+        const minSelect = document.querySelector("#min-hour");
+        const maxSelect = document.querySelector("#max-hour");
+        for (let hour = 13; hour <= 21; hour++) {
+          minSelect.appendChild(new Option(`${hour}時間`, String(hour), hour === 15, hour === 15));
+          maxSelect.appendChild(new Option(`${hour}時間`, String(hour), hour === 21, hour === 21));
+        }
+      }
+
+      function showWallpaper() {
+        const minHour = clamp(parseInt(document.querySelector("#min-hour").value, 10) || 15, 13, 19);
+        const result = calculatePaceData(
+          document.querySelector("#rest-pattern").value,
+          document.querySelector("#strategy").value,
+          minHour,
+          minHour + 2
+        );
+        const svg = buildWallpaperSvg(result);
+        const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const image = document.querySelector("#wallpaper-image");
+        const panel = document.querySelector("#wallpaper-panel");
+
+        if (image.dataset.objectUrl) URL.revokeObjectURL(image.dataset.objectUrl);
+        image.dataset.objectUrl = url;
+        image.dataset.fileName = `okushinano-100-${minHour}-${minHour + 2}h.png`;
+        image.src = url;
+        document.querySelector("#wallpaper-title").textContent = `${minHour}h-${minHour + 2}h 待ち受け画像`;
+        panel.hidden = false;
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      function downloadWallpaperPng() {
+        const image = document.querySelector("#wallpaper-image");
+        if (!image.src) return;
+        if (!image.complete) {
+          image.addEventListener("load", downloadWallpaperPng, { once: true });
+          return;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = 1170;
+        canvas.height = 2532;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(async (blob) => {
+          if (!blob) return;
+          const fileName = image.dataset.fileName || "okushinano-100-pace.png";
+          const file = new File([blob], fileName, { type: "image/png" });
+
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({ files: [file], title: "奥信濃100 pace plan" });
+              return;
+            } catch (error) {
+              if (error.name === "AbortError") return;
+            }
+          }
+
+          const link = document.createElement("a");
+          link.download = fileName;
+          link.href = URL.createObjectURL(blob);
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        }, "image/png");
+      }
+
+      function closeWallpaper() {
+        const image = document.querySelector("#wallpaper-image");
+        if (image.dataset.objectUrl) {
+          URL.revokeObjectURL(image.dataset.objectUrl);
+          delete image.dataset.objectUrl;
+        }
+        image.removeAttribute("src");
+        delete image.dataset.fileName;
+        document.querySelector("#wallpaper-panel").hidden = true;
+      }
+
+      function buildWallpaperSvg(result) {
+        const width = 1170;
+        const height = 2532;
+        const hours = result.headers.slice(3).map((header) => header.replace(" ペース", ""));
+        const aidRows = result.rows.filter((row) => row.type === "aid");
+        const restPattern = document.querySelector("#rest-pattern").value;
+        const strategy = document.querySelector("#strategy").value;
+        const tableX = 92;
+        const tableWidth = 986;
+        const tableY = 650;
+        const tableBottom = 2180;
+        const firstColX = tableX + 28;
+        const rowTop = 858;
+        const rowHeight = 126;
+        const nameX = firstColX;
+        const colXs = [548, 750, 952];
+        const parts = [
+          `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+          `<rect width="${width}" height="${height}" fill="#f7f7f2"/>`,
+          `<rect x="0" y="0" width="${width}" height="650" fill="#23533d"/>`,
+          `<path d="M0 548 C228 474 422 640 660 544 C856 464 990 494 1170 410 L1170 682 L0 682 Z" fill="#527a45" opacity="0.76"/>`,
+          `<path d="M0 598 C164 534 318 594 486 550 C694 496 836 618 1170 506 L1170 706 L0 706 Z" fill="#d9e9ee" opacity="0.42"/>`,
+          `<rect x="${tableX}" y="${tableY}" width="${tableWidth}" height="${tableBottom - tableY}" rx="30" fill="#ffffff"/>`,
+          textSvg(`OKUSHINANO 100 ${hours.join(" / ")} PLAN`, firstColX, 712, 29, 900, "#17201b"),
+          textSvg(`Start 05:00 / Rest ${restPattern} / ${strategy} / Sunrise ${SUNRISE_LABEL} Sunset ${SUNSET_LABEL}`, firstColX, 750, 20, 700, "#627066"),
+          `<line x1="432" y1="778" x2="432" y2="${tableBottom}" stroke="#d9e1d9" stroke-width="3"/>`,
+          `<line x1="649" y1="778" x2="649" y2="${tableBottom}" stroke="#d9e1d9" stroke-width="3"/>`,
+          `<line x1="851" y1="778" x2="851" y2="${tableBottom}" stroke="#d9e1d9" stroke-width="3"/>`,
+          textSvg("AID", nameX, 820, 25, 900, "#627066"),
+          ...hours.map((hour, index) => textSvg(hour, colXs[index], 820, 30, 900, "#23533d", "middle")),
+          `<line x1="${tableX}" y1="842" x2="${tableX + tableWidth}" y2="842" stroke="#d9e1d9" stroke-width="2"/>`
+        ];
+
+        aidRows.forEach((row, index) => {
+          const y = rowTop + index * rowHeight;
+          if (index > 0) parts.push(`<line x1="${tableX}" y1="${y - 42}" x2="${tableX + tableWidth}" y2="${y - 42}" stroke="#d9e1d9" stroke-width="2"/>`);
+
+          const cleanName = cleanCell(row.data[0]).replace(/ DROP| PACER| NO POLE/g, "");
+          const nameLines = cleanName.split(" 関門 ");
+          parts.push(textSvg(nameLines[0], nameX, y, 23, 900, "#17201b"));
+          if (nameLines[1]) parts.push(textSvg(`関門 ${nameLines[1]}`, nameX, y + 30, 20, 800, "#b15c25"));
+          parts.push(textSvg(cleanCell(row.data[1]), nameX, y + 60, 20, 700, "#627066"));
+          const stay = cleanCell(row.data[2]);
+          if (stay !== "-") parts.push(textSvg(`滞在 ${stay}分`, nameX, y + 88, 20, 700, "#627066"));
+
+          for (let col = 0; col < 3; col++) {
+            const schedules = parseScheduleCell(row.data[col + 3]);
+            if (String(row.data[col + 3]).startsWith(HEADLIGHT_CELL_MARKER)) {
+              parts.push(`<rect x="${colXs[col] - 86}" y="${y - 30}" width="172" height="116" rx="14" fill="#edf1f4"/>`);
+              parts.push(`<path d="${makeHatchPath(colXs[col] - 86, y - 30, 172, 116, 12)}" stroke="#b8c0c9" stroke-width="3" opacity="0.65"/>`);
+            }
+            const firstColor = row.data[col + 3].includes("arrival-capped") ? "#c93434" : "#17201b";
+            const secondColor = row.data[col + 3].includes("hatched-yellow") ? "#8a5a00" : "#405247";
+            if (schedules.length <= 1) {
+              const item = schedules[0] || { elapsed: "-", clock: "", label: "" };
+              parts.push(textSvg(`${item.elapsed}${item.label}`, colXs[col], y + 28, 24, 900, firstColor, "middle"));
+              if (item.clock) parts.push(textSvg(`(${item.clock})`, colXs[col], y + 60, 22, 800, "#405247", "middle"));
+            } else {
+              parts.push(textSvg(`${schedules[0].elapsed}${schedules[0].label}`, colXs[col], y + 2, 22, 900, firstColor, "middle"));
+              parts.push(textSvg(`(${schedules[0].clock})`, colXs[col], y + 30, 20, 800, "#405247", "middle"));
+              parts.push(textSvg(`${schedules[1].elapsed}${schedules[1].label}`, colXs[col], y + 72, 22, 900, secondColor, "middle"));
+              parts.push(textSvg(`(${schedules[1].clock})`, colXs[col], y + 100, 20, 800, "#405247", "middle"));
+            }
+          }
+        });
+
+        parts.push("</svg>");
+        return parts.join("");
+      }
+
+      function parseScheduleCell(value) {
+        const text = cleanCell(value);
+        const matches = Array.from(text.matchAll(/(\d{2}:\d{2}) \((\d{2}:\d{2})\)(着|発)?/g));
+        return matches.map((match) => ({
+          elapsed: match[1],
+          clock: match[2],
+          label: match[3] || ""
+        }));
+      }
+
+      function cleanCell(value) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(String(value).replace(HEADLIGHT_CELL_MARKER, "").replace(/<br\s*\/?>/gi, " "), "text/html");
+        return doc.body.textContent.replace(/\s+/g, " ").trim();
+      }
+
+      function makeHatchPath(x, y, width, height, gap) {
+        const lines = [];
+        for (let offset = -height; offset < width; offset += gap) {
+          const x1 = x + Math.max(offset, 0);
+          const y1 = y + Math.max(-offset, 0);
+          const x2 = x + Math.min(offset + height, width);
+          const y2 = y + Math.min(height, width - offset);
+          lines.push(`M${x1} ${y1} L${x2} ${y2}`);
+        }
+        return lines.join(" ");
+      }
+
+      function textSvg(content, x, y, size, weight, color, anchor = "start") {
+        return `<text x="${x}" y="${y}" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Yu Gothic', sans-serif" font-size="${size}" font-weight="${weight}" fill="${color}" text-anchor="${anchor}" letter-spacing="0">${escapeXml(content)}</text>`;
+      }
+
+      function escapeXml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      document.querySelector("#pace-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        update();
+      });
+
+      document.querySelectorAll("#pace-form input, #pace-form select").forEach((control) => {
+        control.addEventListener("change", update);
+      });
+
+      document.querySelector("#wallpaper-button").addEventListener("click", showWallpaper);
+      document.querySelector("#wallpaper-png").addEventListener("click", downloadWallpaperPng);
+      document.querySelector("#wallpaper-close").addEventListener("click", closeWallpaper);
+      document.querySelector(".aid-info summary").addEventListener("click", (event) => {
+        event.preventDefault();
+        const details = event.currentTarget.closest(".aid-info");
+        details.open = !details.open;
+      });
+
+      populateHourSelects();
+      restoreSettings();
+      update();
+    </script>
+    <script>
+      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
+  </body>
+</html>
